@@ -207,6 +207,13 @@ else
             echo
             if [[ ! $REPLY =~ ^[Yy]$ ]]; then
                 print_info "Aborting force push"
+                
+                # Restore stashed changes if any
+                if [ "$STASHED" = true ]; then
+                    print_info "Restoring stashed changes..."
+                    git stash pop
+                    print_success "Stashed changes restored"
+                fi
                 exit 1
             fi
         fi
@@ -243,6 +250,12 @@ else
             print_info "  2. git add <resolved-files>"
             print_info "  3. git rebase --continue"
             print_info "  4. git push origin $BRANCH"
+            
+            # Note: Don't restore stashed changes here - they should be restored
+            # after conflicts are resolved and rebase is completed
+            if [ "$STASHED" = true ]; then
+                print_warning "You have stashed changes. Restore them with 'git stash pop' after resolving conflicts."
+            fi
             exit 1
         fi
     else
@@ -266,6 +279,12 @@ else
             print_info "  2. git add <resolved-files>"
             print_info "  3. git commit -m 'Resolve merge conflicts'"
             print_info "  4. git push origin $BRANCH"
+            
+            # Note: Don't restore stashed changes here - they should be restored
+            # after conflicts are resolved and merge is completed
+            if [ "$STASHED" = true ]; then
+                print_warning "You have stashed changes. Restore them with 'git stash pop' after resolving conflicts."
+            fi
             exit 1
         fi
     fi
