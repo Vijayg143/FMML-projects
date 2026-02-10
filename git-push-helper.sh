@@ -3,8 +3,6 @@
 # Git Push Helper Script
 # This script helps resolve common git push rejection issues
 
-set -e
-
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -55,7 +53,7 @@ EOF
 # Default values
 BRANCH=""
 USE_REBASE=false
-FORCE_LEASE=false
+FORCE_WITH_LEASE=false
 AUTO_YES=false
 STASHED=false
 
@@ -75,7 +73,7 @@ while [[ $# -gt 0 ]]; do
             shift
             ;;
         -f|--force-with-lease)
-            FORCE_LEASE=true
+            FORCE_WITH_LEASE=true
             shift
             ;;
         -y|--yes)
@@ -144,6 +142,13 @@ if ! git rev-parse --verify "origin/$BRANCH" > /dev/null 2>&1; then
     print_info "Attempting to push and create remote branch..."
     git push -u origin "$BRANCH"
     print_success "Branch pushed successfully!"
+    
+    # Restore stashed changes if any
+    if [ "$STASHED" = true ]; then
+        print_info "Restoring stashed changes..."
+        git stash pop
+        print_success "Stashed changes restored"
+    fi
     exit 0
 fi
 
@@ -157,24 +162,45 @@ if [ "$LOCAL" = "$REMOTE" ]; then
     print_info "Attempting to push..."
     git push origin "$BRANCH"
     print_success "Push successful!"
+    
+    # Restore stashed changes if any
+    if [ "$STASHED" = true ]; then
+        print_info "Restoring stashed changes..."
+        git stash pop
+        print_success "Stashed changes restored"
+    fi
     exit 0
 elif [ "$LOCAL" = "$BASE" ]; then
     print_info "Your branch is behind origin/$BRANCH"
     print_info "Fast-forwarding to latest changes..."
     git merge --ff-only "origin/$BRANCH"
     print_success "Branch updated successfully!"
+    
+    # Restore stashed changes if any
+    if [ "$STASHED" = true ]; then
+        print_info "Restoring stashed changes..."
+        git stash pop
+        print_success "Stashed changes restored"
+    fi
     exit 0
 elif [ "$REMOTE" = "$BASE" ]; then
     print_info "Your branch is ahead of origin/$BRANCH"
     print_info "Pushing changes..."
     git push origin "$BRANCH"
     print_success "Push successful!"
+    
+    # Restore stashed changes if any
+    if [ "$STASHED" = true ]; then
+        print_info "Restoring stashed changes..."
+        git stash pop
+        print_success "Stashed changes restored"
+    fi
     exit 0
 else
     print_warning "Branches have diverged!"
     print_info "Local and remote branches have different commits"
     
-    if [ "$FORCE_LEASE" = true ]; then
+    if [ "$FORCE_WITH_LEASE" = true ]; then
         print_warning "Force pushing with lease..."
         if [ "$AUTO_YES" = false ]; then
             read -p "Are you sure you want to force push? This may overwrite remote changes. (y/n) " -n 1 -r
@@ -244,5 +270,3 @@ else
         fi
     fi
 fi
-
-print_success "All done! Your changes have been pushed successfully."
