@@ -134,7 +134,7 @@ fi
 
 # Fetch latest changes
 print_info "Fetching latest changes from remote..."
-if ! git fetch origin "$BRANCH" 2>&1; then
+if ! git fetch origin "$BRANCH"; then
     print_error "Failed to fetch from remote. Please check your network connection and authentication."
     
     # Restore stashed changes if any
