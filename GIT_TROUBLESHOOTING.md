@@ -151,10 +151,11 @@ git reset --hard HEAD~1
 
 **Solution**:
 ```bash
-# Remove large files from git history
-git filter-branch --tree-filter 'rm -f path/to/large/file' HEAD
+# Option 1: Use git-filter-repo (recommended)
+# Install: pip install git-filter-repo
+git filter-repo --path path/to/large/file --invert-paths
 
-# Or use git lfs for large files
+# Option 2: Use git lfs for large files
 git lfs track "*.ipynb"
 git add .gitattributes
 git commit -m "Add git lfs tracking"
