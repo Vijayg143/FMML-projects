@@ -121,7 +121,7 @@ if ! git diff-index --quiet HEAD --; then
             print_success "Changes committed"
         else
             print_warning "Proceeding with uncommitted changes (they will be stashed)"
-            git stash
+            git stash --include-untracked
             STASHED=true
         fi
     else
@@ -134,13 +134,31 @@ fi
 
 # Fetch latest changes
 print_info "Fetching latest changes from remote..."
-git fetch origin "$BRANCH"
+if ! git fetch origin "$BRANCH" 2>&1; then
+    print_error "Failed to fetch from remote. Please check your network connection and authentication."
+    
+    # Restore stashed changes if any
+    if [ "$STASHED" = true ]; then
+        print_info "Restoring stashed changes..."
+        git stash pop
+    fi
+    exit 1
+fi
 
 # Check if remote branch exists
 if ! git rev-parse --verify "origin/$BRANCH" > /dev/null 2>&1; then
     print_warning "Remote branch origin/$BRANCH does not exist"
     print_info "Attempting to push and create remote branch..."
-    git push -u origin "$BRANCH"
+    if ! git push -u origin "$BRANCH"; then
+        print_error "Failed to push new branch to remote"
+        
+        # Restore stashed changes if any
+        if [ "$STASHED" = true ]; then
+            print_info "Restoring stashed changes..."
+            git stash pop
+        fi
+        exit 1
+    fi
     print_success "Branch pushed successfully!"
     
     # Restore stashed changes if any
@@ -160,7 +178,16 @@ BASE=$(git merge-base "$BRANCH" "origin/$BRANCH")
 if [ "$LOCAL" = "$REMOTE" ]; then
     print_success "Your branch is up to date with origin/$BRANCH"
     print_info "Attempting to push..."
-    git push origin "$BRANCH"
+    if ! git push origin "$BRANCH"; then
+        print_error "Failed to push to remote"
+        
+        # Restore stashed changes if any
+        if [ "$STASHED" = true ]; then
+            print_info "Restoring stashed changes..."
+            git stash pop
+        fi
+        exit 1
+    fi
     print_success "Push successful!"
     
     # Restore stashed changes if any
@@ -173,7 +200,16 @@ if [ "$LOCAL" = "$REMOTE" ]; then
 elif [ "$LOCAL" = "$BASE" ]; then
     print_info "Your branch is behind origin/$BRANCH"
     print_info "Fast-forwarding to latest changes..."
-    git merge --ff-only "origin/$BRANCH"
+    if ! git merge --ff-only "origin/$BRANCH"; then
+        print_error "Failed to fast-forward merge"
+        
+        # Restore stashed changes if any
+        if [ "$STASHED" = true ]; then
+            print_info "Restoring stashed changes..."
+            git stash pop
+        fi
+        exit 1
+    fi
     print_success "Branch updated successfully!"
     
     # Restore stashed changes if any
@@ -186,7 +222,16 @@ elif [ "$LOCAL" = "$BASE" ]; then
 elif [ "$REMOTE" = "$BASE" ]; then
     print_info "Your branch is ahead of origin/$BRANCH"
     print_info "Pushing changes..."
-    git push origin "$BRANCH"
+    if ! git push origin "$BRANCH"; then
+        print_error "Failed to push to remote"
+        
+        # Restore stashed changes if any
+        if [ "$STASHED" = true ]; then
+            print_info "Restoring stashed changes..."
+            git stash pop
+        fi
+        exit 1
+    fi
     print_success "Push successful!"
     
     # Restore stashed changes if any
@@ -217,7 +262,16 @@ else
                 exit 1
             fi
         fi
-        git push --force-with-lease origin "$BRANCH"
+        if ! git push --force-with-lease origin "$BRANCH"; then
+            print_error "Failed to force push to remote"
+            
+            # Restore stashed changes if any
+            if [ "$STASHED" = true ]; then
+                print_info "Restoring stashed changes..."
+                git stash pop
+            fi
+            exit 1
+        fi
         print_success "Force push completed!"
         
         # Restore stashed changes if any
@@ -234,7 +288,16 @@ else
         if git rebase "origin/$BRANCH"; then
             print_success "Rebase successful!"
             print_info "Pushing changes..."
-            git push origin "$BRANCH"
+            if ! git push origin "$BRANCH"; then
+                print_error "Failed to push after rebase"
+                
+                # Restore stashed changes if any
+                if [ "$STASHED" = true ]; then
+                    print_info "Restoring stashed changes..."
+                    git stash pop
+                fi
+                exit 1
+            fi
             print_success "Push successful!"
             
             # Restore stashed changes if any
@@ -263,7 +326,16 @@ else
         if git merge "origin/$BRANCH" -m "Merge remote changes from origin/$BRANCH"; then
             print_success "Merge successful!"
             print_info "Pushing changes..."
-            git push origin "$BRANCH"
+            if ! git push origin "$BRANCH"; then
+                print_error "Failed to push after merge"
+                
+                # Restore stashed changes if any
+                if [ "$STASHED" = true ]; then
+                    print_info "Restoring stashed changes..."
+                    git stash pop
+                fi
+                exit 1
+            fi
             print_success "Push successful!"
             
             # Restore stashed changes if any
