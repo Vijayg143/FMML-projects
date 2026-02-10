@@ -40,7 +40,7 @@ OPTIONS:
     -h, --help          Show this help message
     -b, --branch NAME   Specify branch name (default: current branch)
     -r, --rebase        Use rebase instead of merge
-    -f, --force-lease   Force push with lease (use with caution)
+    -f, --force-with-lease   Force push with lease (use with caution)
     -y, --yes           Skip confirmation prompts
 
 EXAMPLES:
@@ -57,6 +57,7 @@ BRANCH=""
 USE_REBASE=false
 FORCE_LEASE=false
 AUTO_YES=false
+STASHED=false
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
@@ -73,7 +74,7 @@ while [[ $# -gt 0 ]]; do
             USE_REBASE=true
             shift
             ;;
-        -f|--force-lease)
+        -f|--force-with-lease)
             FORCE_LEASE=true
             shift
             ;;
@@ -186,8 +187,11 @@ else
         git push --force-with-lease origin "$BRANCH"
         print_success "Force push completed!"
         
+        # Restore stashed changes if any
         if [ "$STASHED" = true ]; then
+            print_info "Restoring stashed changes..."
             git stash pop
+            print_success "Stashed changes restored"
         fi
         exit 0
     fi
@@ -199,6 +203,13 @@ else
             print_info "Pushing changes..."
             git push origin "$BRANCH"
             print_success "Push successful!"
+            
+            # Restore stashed changes if any
+            if [ "$STASHED" = true ]; then
+                print_info "Restoring stashed changes..."
+                git stash pop
+                print_success "Stashed changes restored"
+            fi
         else
             print_error "Rebase failed with conflicts"
             print_info "Please resolve conflicts manually:"
@@ -215,6 +226,13 @@ else
             print_info "Pushing changes..."
             git push origin "$BRANCH"
             print_success "Push successful!"
+            
+            # Restore stashed changes if any
+            if [ "$STASHED" = true ]; then
+                print_info "Restoring stashed changes..."
+                git stash pop
+                print_success "Stashed changes restored"
+            fi
         else
             print_error "Merge failed with conflicts"
             print_info "Please resolve conflicts manually:"
@@ -225,13 +243,6 @@ else
             exit 1
         fi
     fi
-fi
-
-# Restore stashed changes if any
-if [ "$STASHED" = true ]; then
-    print_info "Restoring stashed changes..."
-    git stash pop
-    print_success "Stashed changes restored"
 fi
 
 print_success "All done! Your changes have been pushed successfully."
